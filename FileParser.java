@@ -39,13 +39,13 @@ public class FileParser {
 			int day = calendar.get(Calendar.DAY_OF_WEEK); 
 			
 
-				int startHour = Integer.parseInt(rows[i][0]);
+				int startHour = Integer.parseInt(rows[i][1]);
 				if(startHour == 12) {
 					startHour =0;
 				}
-				int startMinute = Integer.parseInt(rows[i][1]);
-				int endHour = Integer.parseInt(rows[i][2]);
-				int endMinute = Integer.parseInt(rows[i][3]);
+				int startMinute = Integer.parseInt(rows[i][2]);
+				int endHour = Integer.parseInt(rows[i][3]);
+				int endMinute = Integer.parseInt(rows[i][4]);
 				
 				
 				int currentDay = Integer.parseInt(rows[i][3+day]);
