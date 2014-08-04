@@ -4,6 +4,10 @@ import java.awt.GraphicsEnvironment;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.image.BufferedImage;
+import javax.imageio.ImageIO;
+import javax.swing.JFrame;
+import javax.swing.SwingWorker;
+import javax.swing.Timer;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
@@ -18,12 +22,6 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
-
-import javax.imageio.ImageIO;
-import javax.swing.JFrame;
-import javax.swing.SwingWorker;
-import javax.swing.Timer;
-
 
 public class Signage {
 
