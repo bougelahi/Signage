@@ -197,7 +197,9 @@ public class Signage {
 			int i = 0;
 
 			while ((line = br.readLine()) != null) {
-				//	System.out.println(line);
+				
+				if(line.contains(",")) {
+					//System.out.println("line: " + line);
 				attrs = line.split(",");
 
 				if(attrs.length >= 5) {
@@ -221,8 +223,17 @@ public class Signage {
 				// (currentHour > startHour AND currentHour < endHour) OR
 				// (currentHour = startHour AND currentMinute >= startMinute) OR
 				// (currentHour = startHour AND currentHour = endHour AND currentMinute >= startMinute AND currentMinute <= endMinute)
-				//System.out.println("Current Time: " + currentHour +":"+currentMinute);
-				if(currentDay == 1 && (currentHour > startHour && currentHour < endHour) || (currentHour == startHour && currentMinute >= startMinute) || (currentHour == startHour && currentHour == endHour && currentMinute >= startMinute && currentMinute <= endMinute)) {
+				/*
+				System.out.println("Current Time: " + currentHour +":"+currentMinute + "  Day: " + currentDay);
+				System.out.println("Start: " + startHour+":" +startMinute );
+				System.out.println("End: " + endHour+":"+endMinute);
+				System.out.println((currentHour == startHour ) );
+				System.out.println((currentMinute >= startMinute));
+				*/
+				if(currentDay == 1 && ((currentHour > startHour && currentHour < endHour) ||
+						(currentHour == startHour && currentMinute >= startMinute) || 
+						(currentHour == startHour && currentHour == endHour && currentMinute >= startMinute && currentMinute <= endMinute)||
+						( currentHour == endHour && currentMinute <= endMinute))){
 
 					System.out.println(attrs[0].substring(attrs[0].lastIndexOf("/")+1) + " IS playing!");
 					if(attrs[0].lastIndexOf("/") != -1)
@@ -231,16 +242,18 @@ public class Signage {
 					names.add(attrs[0].substring(attrs[0].lastIndexOf("/")+1));
 					
 				}
+				else {
+					//System.out.println("CurrentDay: " + currentDay);
+					//System.out.println("Start: " + startHour+":" +startMinute + "\tEnd: " + endHour+":"+endMinute);
+				System.out.println(attrs[0].substring(attrs[0].lastIndexOf("/")+1) + " IS NOT playing!");
+				
+			}//end else
 
 				}//end if
-				else {
-						//System.out.println("CurrentDay: " + currentDay);
-						//System.out.println("Start: " + startHour+":" +startMinute + "\tEnd: " + endHour+":"+endMinute);
-					System.out.println(attrs[0].substring(attrs[0].lastIndexOf("/")+1) + " IS NOT playing!");
-					
-				}//end else
+				
 				i++;
 			}//end wile
+		}//end if
 		}//end try
 
 		catch(Exception e) {
@@ -287,7 +300,7 @@ public class Signage {
 			}//end run
 
 			public void changeImage() {
-				if(doneDownloading && imgs != null && imgs.length != 0 ) {
+				if(doneDownloading && imgs != null && imgs.length != 0  ) {
 					if(currentImage >= imgs.length) {
 						currentImage = 0;
 					}//end if
