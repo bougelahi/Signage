@@ -47,6 +47,7 @@ public class Signage {
 	//BufferedImage[] imgs; //Array for all the images to be played
 	ArrayList<BufferedImage> imgs;
 	ArrayList<String> imageNames; //Array to store all of the image names
+	ArrayList<String> playingImageNames;
 	boolean newImages = true;
 	boolean doneDownloading = false;
 	boolean hasImages = false;
@@ -106,6 +107,7 @@ public class Signage {
 		
 		startSocket();
 		imageNames = new ArrayList<String>();
+		playingImageNames = new ArrayList<String>();
 		interval = Integer.parseInt(properties.getProperty("interval"));
 		//imageUpdate is called every 1 minute
 		Timer timer = new Timer(60000,imageUpdater);
@@ -297,7 +299,8 @@ public class Signage {
 	//playing images in the slideshow throughout the day
 	public void getCurrentContent() {
 		ArrayList<BufferedImage> imageList = new ArrayList<BufferedImage>();
-		imageNames = new ArrayList<String>();
+		imageNames.clear();
+		playingImageNames.clear();
 		//ArrayList<String> names = new ArrayList<String>();
 		try {
 			//Open "schedule.txt" for reading
@@ -348,7 +351,9 @@ public class Signage {
 							System.out.println(imageName + " IS playing!");
 							if(attrs[0].lastIndexOf("/") != -1){
 								try{
+									
 								imageList.add(ImageIO.read(new File(imageName)));
+								playingImageNames.add(imageName);
 							//	names.add(attrs[0].substring(attrs[0].lastIndexOf("/")+1));
 								}
 								catch(Exception e) {
@@ -453,7 +458,7 @@ public class Signage {
 					}//end if
 					try {
 						
-						System.out.println("Slideshow image " + currentImage + ": " + imageNames.get(currentImage));//+ "  " + imageNames[currentImage]);
+						System.out.println("Slideshow image " + currentImage + ": " + playingImageNames.get(currentImage));//+ "  " + imageNames[currentImage]);
 						setImage(imgs.get(currentImage));
 					
 						currentImage++;
