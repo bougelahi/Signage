@@ -32,7 +32,7 @@ import javax.swing.Timer;
 
 public class Signage {
 
-	 //Declare variables for the slideshows
+	//Declare variables for the slideshows
 	private boolean first = true;
 	private String schedule = ""; 
 	private ArrayList<BufferedImage> imgs;
@@ -51,29 +51,27 @@ public class Signage {
 	private static final int IMG_WIDTH = java.awt.Toolkit.getDefaultToolkit().getScreenSize().width;
 	private static final int IMG_HEIGHT = java.awt.Toolkit.getDefaultToolkit().getScreenSize().height;
 	private final Properties properties;//Properties object to retrieve info from config file
-	
-	 public static void main(String[] args) {
-			Signage f = new Signage();
-			f.imageUpdate(false);
 
-		}//end main
-		
-	
+	public static void main(String[] args) {
+		Signage f = new Signage();
+		f.imageUpdate(false);
+
+	}//end main
+
 	
 	public Signage() {
-		
+
 		//Retrieve properties from Config file
 		properties = new Properties(); 
 		try {
-	        	String propFileName = "config.properties"; //File where properties are stored
-	            FileInputStream in = new FileInputStream(propFileName);
-	            properties.load(in);
-	            properties.getProperty("directory");
+			String propFileName = "config.properties"; //File where properties are stored
+			FileInputStream in = new FileInputStream(propFileName);
+			properties.load(in);
+			//properties.getProperty("directory");
+		} catch (IOException e) {
+			throw new ExceptionInInitializerError(e);
+		}
 
-	        } catch (IOException e) {
-	            throw new ExceptionInInitializerError(e);
-	        }
-	    
 
 		//imageUpdater calls the imageUpdate method every 60 seconds
 		ActionListener imageUpdater = new ActionListener() {
@@ -81,34 +79,33 @@ public class Signage {
 				imageUpdate(false);
 			}
 		};//end imageUpdater
-				
+
 		try {
 			url = new URL(properties.getProperty("fetch"));
 		} catch (MalformedURLException e) {
 			e.printStackTrace();
 		}
-		
+
 		//Start the socket that waits for a Forced Update
 		startSocket();
-		
+
 		//ArrayLists for storing Images and their names
 		imgs = new ArrayList<BufferedImage>();
-		imageNames = new ArrayList<String>();
-		playingImageNames = new ArrayList<String>();
-		
+		imageNames = new ArrayList<String>();			//All possible images playing
+		playingImageNames = new ArrayList<String>();	//Only images currently playing
+
 		//How many minutes between updates
 		interval = Integer.parseInt(properties.getProperty("interval"));
 		//imageUpdate is called every 1 minute
 		Timer timer = new Timer(60000,imageUpdater);
 		timer.setRepeats(true);
 		timer.start();
-		
+
 		//create the frame for the slideshow
 		frame = new SlideShowFrame();
 		frame.setVisible(true);
 	}//end Signage constructor
-	
-	
+
 
 	//imageUpdate is called by the ActionListener
 	public void imageUpdate(boolean forced) {
@@ -116,19 +113,19 @@ public class Signage {
 		SimpleDateFormat sdf = new SimpleDateFormat("HH:mm");
 		String currentTime = sdf.format(new Date());
 		int currentMinute = Integer.parseInt(currentTime.substring(currentTime.indexOf(":") + 1));
-		
-		
+
 		//Check whether it is the correct time to update 
 		if(currentMinute % interval == 0 || first || forced) {
 			first = false;
 			if(forced){
 				System.out.println("FORCED UPDATE");
 			}
-			
-				//attempt to download schedule to local file, then download all of the images on the schedule
-				downloadSchedule();
-				downloadImages();
-				
+
+			//attempt to download schedule to local file, then download all of the images on the schedule
+			downloadSchedule();
+			getCurrentContent();
+			downloadImages();
+
 		}
 		else {
 			System.out.println(currentTime + ": no update.");
@@ -137,7 +134,7 @@ public class Signage {
 
 	//resizeImage changes the downloaded image's size to the screen's resolution automatically
 	BufferedImage resizeImage(BufferedImage originalImage, int type) {
-		
+
 		BufferedImage resizedImage = new BufferedImage(IMG_WIDTH,IMG_HEIGHT,type);
 		Graphics2D g = resizedImage.createGraphics();
 		g.drawImage(originalImage,0,0,IMG_WIDTH,IMG_HEIGHT,null);	
@@ -148,9 +145,7 @@ public class Signage {
 	public void downloadSchedule() {
 
 		try {
-			
-			imageNames.clear();
-			
+
 			//Connect to the server
 			HttpURLConnection con = (HttpURLConnection)(url.openConnection());
 			int responseCode = con.getResponseCode();
@@ -159,53 +154,46 @@ public class Signage {
 			BufferedReader in = new BufferedReader(new InputStreamReader(con.getInputStream()));
 			String inputLine;
 			StringBuffer response = new StringBuffer();
-	
-			
+
 			//Read in the text from the server one line at a time
 			while((inputLine = in.readLine()) != null) {
-				
+
 				//append the line with new line characters to the response
 				response.append(inputLine+"\r\n");
-				
+
 				//Split string by commas to get attributes as separate Strings
 				String[] arr = inputLine.split(",");
-				
+
 				if(arr.length > 1 && arr[0].length() > 1) {
 					//store image names to download images from the server
 					String temp = arr[0].substring(1);
 					temp = temp.substring(temp.lastIndexOf("/")+1);
-					imageNames.add(temp);
+
 				}
 			}//end while
-
-			in.close();
+	
 			//Store the response in a single string
 			schedule = response.toString();
-		
-		if(schedule.length() > 0) {	
+
+			if(schedule.length() > 0) {	
 				//BufferedWriter used to write text to a file
 				BufferedWriter writer = null;
 				writer = new BufferedWriter( new FileWriter("schedule.txt"));
 				//Write the string to the file
 				writer.write(schedule);
 				System.out.println("Schedule Written");
-
-				if ( writer != null) {
-					writer.close( );
-				}
-		}
-
+				writer.close();
+			}
+			in.close();
 		}//end try 
 		catch (Exception e) {
 			e.printStackTrace();
 		}	
 	}//end downloadSchedule
 
-
+	//Write images in schedule to local files
 	public void downloadImages() {
-
-		doneDownloading = false;
-
+	
 		//SwingWorker used to download each image concurrently
 		SwingWorker<BufferedImage, Void> worker = new SwingWorker<BufferedImage, Void>() {
 			@Override
@@ -235,23 +223,20 @@ public class Signage {
 				return temp_image;
 			}//end doInBackground
 
+			//Called once all files have been downloaded, or at least attempted
 			@Override
 			public void done() {
-
-				//Called once all files have been downloaded, or at least attempted
 				System.out.println("Writing done");
 				doneDownloading = true;
-				getCurrentContent();
-				
 			}//end done
-
 		};//end worker
+		
+		doneDownloading = false;
 		worker.execute();
 	}//end downloadImages
 
 
-	//This method reads the "schedule.txt" file to get the list of currently
-	//playing images in the slideshow throughout the day
+	//This method reads the "schedule.txt" file to get the list of currently playing images
 	public void getCurrentContent() {
 
 
@@ -259,12 +244,12 @@ public class Signage {
 			//Open "schedule.txt" for reading
 			BufferedReader br = new BufferedReader(new FileReader("schedule.txt"));
 			String line;
-			
+
 
 			imgs.clear();
 			playingImageNames.clear();
 			imageNames.clear();
-			
+
 			//Go through the file line by line
 			while ((line = br.readLine()) != null) {
 
@@ -277,7 +262,7 @@ public class Signage {
 						String imageName = attrs[0].substring(attrs[0].lastIndexOf("/")+1);
 						//All image names are added to imageNames to check which pictures to delete.
 						imageNames.add(imageName);
-						
+
 						SimpleDateFormat sdf = new SimpleDateFormat("HH:mm");
 						Calendar calendar = Calendar.getInstance();
 
@@ -293,8 +278,8 @@ public class Signage {
 						int startMinute = Integer.parseInt(attrs[2]);
 						int endHour = Integer.parseInt(attrs[3]);
 						int endMinute = Integer.parseInt(attrs[4]);
-												
-						
+
+
 						//Format hour and minutes to 12 hour clock
 						String hour = "" + startHour;
 						String minute = "" + startMinute;
@@ -309,23 +294,23 @@ public class Signage {
 								hour = "" + (startHour-12);
 							}
 						}
-						
+
 						if(startMinute < 10) {
 							minute = "0" + startMinute;
 						}
-				
+
 						//Compare the actual day/time with the required days/times in the schedule to determine what should be playing
 						if(day == 1 && 
 								(currentHour > startHour && currentHour < endHour) ||
 								(currentHour == startHour &&currentHour < endHour && currentMinute >= startMinute) || 
 								(currentHour == startHour && currentHour == endHour && currentMinute >= startMinute && currentMinute <= endMinute)||
-								( currentHour == endHour && currentMinute <= endMinute)){
-							
-								//Add bufferedImage and imageName to their respective ArrayLists
-								System.out.println(imageName + "("+hour+":"+minute+") IS playing!");
-								imgs.add(ImageIO.read(new File(imageName)));
-								//playingImageNames is strictly for images that are in a slideshow playing NOW
-								playingImageNames.add(imageName);
+								(currentHour == endHour && currentMinute <= endMinute)){
+
+							//Add bufferedImage and imageName to their respective ArrayLists
+							System.out.println(imageName + "("+hour+":"+minute+") IS playing!");
+							imgs.add(ImageIO.read(new File(imageName)));
+							//playingImageNames is strictly for images that are in a slideshow playing NOW
+							playingImageNames.add(imageName);
 						}
 						else {							
 							System.out.println(imageName + "("+hour+":"+minute+") IS NOT playing!");
@@ -335,26 +320,26 @@ public class Signage {
 				}//end wile
 			}//end if
 			br.close();
-		
+
 		}//end try
 		catch(Exception e) {
 			e.printStackTrace();
 		}
-		
+
 		System.out.println(imgs.size() + " images in slideshow");
 		deleteOldImages();
 	}//end getCurrentContent
-	
+
 	public void deleteOldImages() {
 		File dir = new File(System.getProperty("user.dir"));
 		File[] files = dir.listFiles(new FilenameFilter() {
 			public boolean accept(File dir, String name) {
 				//Find only files with extension .jpg or .jpeg
-		        return name.toLowerCase().endsWith(".jpg") || name.toLowerCase().endsWith(".jpeg") ;
-		    }
+				return name.toLowerCase().endsWith(".jpg") || name.toLowerCase().endsWith(".jpeg") ;
+			}
 		});
-		
-		
+
+
 		//Go through all files in the directory and delete any JPEG images not on the schedule
 		for(File f : files) {
 			if(!imageNames.contains(f.getName())) {
@@ -385,7 +370,7 @@ public class Signage {
 			GraphicsEnvironment.getLocalGraphicsEnvironment().getDefaultScreenDevice().setFullScreenWindow(this);
 			currentImageIndex = 0;
 
-			
+
 			//Use displayer Thread to update what is shown on the screen
 			final Displayer displayer = new Displayer();
 			displayer.start();
@@ -406,29 +391,28 @@ public class Signage {
 
 			//changeImage changes which index of the imgs array to display next
 			public void changeImage() {
-				
+
 				//Ensure there are no images downloading and that there are pictures in the Slideshow
-				if(doneDownloading && imgs != null && imgs.size() > 0  ) {
-					
+				if(doneDownloading && imgs.size() > 0  ) {
+
 					//Go to the beginning of the slideshow when we reach the end
 					if(currentImageIndex >= imgs.size()) {
 						currentImageIndex = 0;
 					}
-					
+
 					System.out.println("Slideshow image " + currentImageIndex + ": " + playingImageNames.get(currentImageIndex));
 					currentImage = imgs.get(currentImageIndex);
-					currentImageIndex++;
 					repaint();
-				
+					currentImageIndex++;
+
 				}
 
 			}//end changeImage
 		}//end Reader class	
-		
-		
+
 		//Displays the currentImage to the screen
 		public void paint(Graphics g) {
-			if(currentImage != null) {
+			if(currentImage != null && playingImageNames.size() > 0) {
 				g.drawImage(currentImage,0,0,this);
 			}//end if
 			else {
@@ -438,46 +422,44 @@ public class Signage {
 			}
 		}//end paint
 	}//end SlideShowFrame class
-	
+
 	public void startSocket() {
-		
+
 		SwingWorker<Integer, Void> worker = new SwingWorker<Integer, Void>() {
 			@Override
 			public Integer doInBackground() {
 				try {
-			             listenSock = new ServerSocket(20222);
-			             while (true) {       //we want the server to run till the end of times
-			                 sock = listenSock.accept();             //wait for connection, then continue execution
-			                 BufferedReader br =    new BufferedReader(new InputStreamReader(sock.getInputStream()));
-			                 String line;
-			                 
-			                 //Check if the message received was ForceUpdate
-			                 while ((line = br.readLine()) != null) {    
-			                     if(line.equals("ForceUpdate"))
-			                    	 imageUpdate(true);
-			                 }
-			
-			                 //Close BufferedReader stream
-			                 br.close();
-			             }
-			         } catch (IOException e) {
-			             e.printStackTrace();
-			        }
+					listenSock = new ServerSocket(20222);
+					while (true) {       //we want the server to run till the end of times
+						sock = listenSock.accept();             //wait for connection, then continue execution
+						BufferedReader br =    new BufferedReader(new InputStreamReader(sock.getInputStream()));
+						String line;
+
+						//Check if the message received was ForceUpdate
+						while ((line = br.readLine()) != null) {    
+							if(line.equals("ForceUpdate"))
+								imageUpdate(true);
+						}
+						br.close(); //Close BufferedReader stream
+					}
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
 				return 0;
 			}
-		
-		@Override
-		public void done() {
-               try {
-				sock.close();
-			} catch (IOException e) {
-				e.printStackTrace();
-			}
-			System.out.println("Socket done");
-		}//end done
-		
-			};
-		
+
+			@Override
+			public void done() {
+				try {
+					sock.close();
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
+				System.out.println("Socket done");
+			}//end done
+
+		};
+
 		//Start the new worker
 		worker.execute();
 	}
